@@ -5,7 +5,6 @@
 #include <queue>
 
 #include <windows.h>
-// #include <NuiApi.h>
 
 #include <iarm.h>
 
