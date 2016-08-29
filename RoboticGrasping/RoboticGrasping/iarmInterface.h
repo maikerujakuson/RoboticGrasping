@@ -97,8 +97,6 @@ public:
 	int moveBy(float x, float y, float z);
 	int moveTo(float pos[3]);
 	int moveBy(float pos[3]);
-	int moveTo(Vector3f pos);
-	int moveBy(Vector3f pos);
 
 	// ホームポジションへの移動
 	int moveHomePosition(void);
@@ -134,8 +132,6 @@ public:
 	int stockMoveBy(float x, float y, float z);
 	int stockMoveTo(float pos[3]);
 	int stockMoveBy(float pos[3]);
-	int stockMoveTo(Vector3f pos);
-	int stockMoveBy(Vector3f pos);
 
 	// ホームポジションへの移動
 	int stockMoveHomePosition(void);

@@ -215,10 +215,6 @@ int IARMInterface::moveTo(float pos[3]) {
 	return moveTo(pos[0], pos[1], pos[2]);
 }
 
-// èñ‚ÌˆÊ’u‚ğx,y,z‚ÉˆÚ“®‚·‚é
-int IARMInterface::moveTo(Vector3f pos) {
-	return moveTo(pos.x, pos.y, pos.z);
-}
 
 // èñ‚ÌˆÊ’u‚ğŒ»İ‚©‚çx,y,z‚¾‚¯ˆÚ“®‚³‚¹‚é
 int IARMInterface::moveBy(float x, float y, float z) {
@@ -676,14 +672,6 @@ int IARMInterface::stockMoveBy(float pos[3]) {
 
 int IARMInterface::stockMoveTo(float pos[3]) {
 	return stockMoveTo(pos[0], pos[1], pos[2]);
-}
-
-int IARMInterface::stockMoveBy(Vector3f pos) {
-	return stockMoveBy(pos.x, pos.y, pos.z);
-}
-
-int IARMInterface::stockMoveTo(Vector3f pos) {
-	return stockMoveTo(pos.x, pos.y, pos.z);
 }
 
 int IARMInterface::stockRotationBy(float angle) {
