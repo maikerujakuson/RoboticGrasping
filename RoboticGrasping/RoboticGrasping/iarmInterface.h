@@ -8,7 +8,6 @@
 // #include <NuiApi.h>
 
 #include <iarm.h>
-#include "vector3f.h"
 
 class IARMInterface {
 private:
