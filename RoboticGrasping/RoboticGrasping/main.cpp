@@ -23,41 +23,6 @@
 //	return 0;
 //}
 
-/*
-* Copyright (c) 2010 by Exact Dynamics B.V.
-*
-* All rights reserved. No part of this software or
-* source code may be used, reproduced, stored in a retrieval system, or
-* transmitted, in any form or by any means, without prior written permission
-* from Exact Dynamics B.V. Except as expressly provided in writing by Exact
-* Dynamics B.V., Exact Dynamics B.V. does not grant any express or implied
-* rights to use (any part of) this software & source code.
-*
-*  Exact Dynamics B.V. This software may only be used in combination
-*  with a valid Transparent Mode Software License from Exact Dynamics B.V.
-*  Exact Dynamics B.V. does not take any responsibility for the consequences
-*  of the usage of this software and the iARM, this includes damage to the iARM
-*  and/or its suroundings (including people).
-*
-*  By using this software, you agree to this agreement. If you do not agree
-*  please contact Exact Dynamics B.V. and do not use this software or the iARM.
-*
-*  This Copyright notice may not be removed or modified without prior
-*  written consent of esd gmbh.
-*
-*  Exact Dynamics B.V., reserves the right to modify this software
-*  without notice.
-*
-*  For support, questions and/or suggestions do not hesitate to contact
-*  use at research@exactdynamics.nl, after reading the manual.
-*
-*  Have fun!
-*
-*  Exact Dynamics B.V.
-*
-*  Chamber of Commerce: Arnhem, the Netherlands, 090705840000.
-*/
-
 #ifdef WIN32
 #include <windows.h>
 #include <conio.h>
@@ -80,7 +45,7 @@ struct termios ots; /* copy of initial termios of tty */
 #include "iarm.h"
 
 					/* CONSTANTS */
-
+					// Enumeration for catesian dimension system
 typedef enum IARM_CARTESIAN_DIMENSION { X, Y, Z, YAW, PITCH, ROLL } IARM_CARTESIAN_DIMENSION;
 typedef enum IARM_JOINT { J1, J2, J3, J4, J5, J6, GRIPPER } IARM_JOINT;
 
@@ -116,10 +81,12 @@ void print_application_title(void);
 void ttyset(void);
 void ttyreset(int);
 
-/* GLOBALS */
-
 IARM_HANDLE g_hRobot = IARM_INVALID_HANDLE;
+
+// variable for a can port number (default value is 0)
 int			g_can_port = DEFAULT_CAN_PORT;
+
+// Variable for status (global)
 IARM_STATUS	g_status;
 
 float linearVelocity[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
@@ -127,52 +94,73 @@ float jointVelocity[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 float gripperVelocity = 0.0f;
 float joint_position[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 float gripper_position = 0.0f;
+
+// Home position
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
+// Zero position
 float positionZero[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 
+
+// MAIN FUNCTION
 int main(int argc, char *argv[])
 {
+	// Initialize status_counter 0
 	int status_counter = 0;
+	// Variable for keyboard input
 	char key;
 
+	//	Print library version 
 	print_application_title();
 
+	// Terminate the program when arguments is inaccurate 
 	if (!read_arguments(argc, argv))
 		return EXIT_ERROR;
 
+	// Print a can port to connect iARM 
 	printf("Waiting for iARM to connect on CAN-bus %d...\n", g_can_port);
 
+	// Make connections between iARM and PC 
 	g_hRobot = iarm_connect(g_can_port);
+	// Terminate the program when connection is failed
 	if (IARM_INVALID_HANDLE == g_hRobot)
 	{
 		printf("Could not open CAN device on CAN-bus %d\n", g_can_port);
 		return EXIT_ERROR;
 	}
+
+	// Configure TTY for keyboard input (only in UNIX)
 	ttyset();
+
+	// Print runtime parameters
 	print_help();
 
+	// Get the current iarm status
 	printf("!Robot connected\n");
 	iarm_get_status(g_hRobot, &g_status);
 
-	/* Main loop for example application.
-	* Every <STATUS_CHECK_INTERVAL> cycles the status of the iARM is checked. */
+	// Main loop for example application.
+	// Do loops until connection between iARM and PC is fine 
 	while (iarm_is_connected(g_hRobot) == IARM_SUCCESS)
 	{
-		/* read and process keyboard input */
+		// Read keyboard input 
 		if (keyboard_read_key(&key))
+			// Execute commands
 			process_key_press(key);
 
+		// Every <STATUS_CHECK_INTERVAL> cycles the status of the iARM is checked. 
 		if (status_counter++ == STATUS_CHECK_INTERVAL)
 		{
+			// Update status
 			update_status();
+			// Set counter back to 0
 			status_counter = 0;
 		}
-
-		/* yield for a short time (required) */
+		
+		// Sleep 10 milliseconds
 		mssleep(10);
 	}
-
-	/* clean up */
+	
+	// Clean up
 	iarm_disconnect(g_hRobot);
 	printf("iARM terminated.\nPress any key to quit...\n");
 
@@ -188,14 +176,18 @@ int main(int argc, char *argv[])
 * to the actual status, e.g. notification of movement finished and mechanical limits. */
 void update_status()
 {
+	// Variable for the current status
 	IARM_STATUS current_status;
+	// Variable for the loop counter
 	int i;
 
+	// Get the current status
 	iarm_get_status(g_hRobot, &current_status);
 
-	/* Check if the movement_status has been changed and report the new state if this is the case */
+	// Cheack whether status is changed or not
 	if (current_status.movement_status != g_status.movement_status)
 	{
+		// Print the new state 
 		switch (current_status.movement_status)
 		{
 		case IARM_MOVEMENT_FINISHED:
@@ -209,7 +201,7 @@ void update_status()
 		}
 	}
 
-	/* Check if we have a (resolved) joint block and did not report it already */
+	// Print whether joint is blocked or resolved
 	for (i = 0; i < IARM_NR_JOINTS; ++i)
 	{
 		if ((current_status.blocked_status[i] != g_status.blocked_status[i]) &&
@@ -225,47 +217,60 @@ void update_status()
 		(current_status.blocked_status[GRIPPER] != IARM_BLOCK_NONE))
 		printf("!Gripper closed\n");
 
+	// Update the current status to global status
 	memcpy(&g_status, &current_status, sizeof(IARM_STATUS));
 }
 
+// Function to process keyinput
 void process_key_press(char key)
 {
+	// 
 	IARM_RESULT result = IARM_SUCCESS;
 	int i;
 
 	switch (key)
 	{
 		/* XYZ */
+		// Move forward in X dimention according to linearVelocity[0]
 	case 'a':
 		linearVelocity[X] += VELOCITY_STEP_LINEAR;
+		// Print the current X velocity
 		printf(" > X-Axis+: %f\n", linearVelocity[X]);
+		// Move and change orientation with a given velocity
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+		// Move backward in X dimention according to linearVelocity[0]
 	case 'z':
 		linearVelocity[X] -= VELOCITY_STEP_LINEAR;
 		printf(" > X-Axis-: %f\n", linearVelocity[X]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+		// Move forward in Y dimention according to linearVelocity[1]
 	case 's':
 		linearVelocity[Y] += VELOCITY_STEP_LINEAR;
 		printf(" > Y-Axis+: %f\n", linearVelocity[Y]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+		// Move backward in Y dimention according to linearVelocity[1]
 	case 'x':
 		linearVelocity[Y] -= VELOCITY_STEP_LINEAR;
 		printf(" > Y-Axis-: %f\n", linearVelocity[Y]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+		// Move forward in Z dimention according to linearVelocity[2]
 	case 'd':
 		linearVelocity[Z] += VELOCITY_STEP_LINEAR;
 		printf(" > Z-Axis+: %f\n", linearVelocity[Z]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+		// Move backward in Z dimention according to linearVelocity[2]
 	case 'c':
 		linearVelocity[Z] -= VELOCITY_STEP_LINEAR;
 		printf(" > Z-Axis-: %f\n", linearVelocity[Z]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+
+		// 
 	case 'f':
 		linearVelocity[YAW] += VELOCITY_STEP_ORIENTATION;
 		printf(" > Yaw+   : %f\n", linearVelocity[YAW]);
@@ -296,30 +301,40 @@ void process_key_press(char key)
 		printf(" > Roll-  : %f\n", linearVelocity[ROLL]);
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
+
+		// Unfold iARM
 	case 'o':
 		printf(" > Unfolding\n");
 		result = iarm_unfold(g_hRobot);
 		break;
+		// Fold iARM
 	case 'i':
 		printf(" > Folding\n");
 		result = iarm_fold(g_hRobot);
 		break;
+
+		// Terminate the program
 	case 27: /* <ESCAPE> key */
 		printf(" > Terminating...\n");
 		iarm_disconnect(g_hRobot);
 		break;
-	case ';': /* GO TO HOME POSITION */
+
+		// Move to home position
+	case ';':
 	{
 		printf(" > Home   : cart (fold-out)\n");
 		result = iarm_move_position_linear(g_hRobot, positionHome);
 	}
 	break;
-	case '0': // zero-position
+	// Move to zero-position
+	case '0': 
 	{
 		printf(" > Home   : zero position\n");
 		result = iarm_move_position_joint(g_hRobot, positionZero, 0.0f, IARM_LIFT_KEEP_POS);
 	}
 	break;
+
+	// Joint control
 	case '1':
 		jointVelocity[J1] += VELOCITY_STEP_JOINT;
 		printf(" > Joint1+: %f\n", jointVelocity[J1]);
@@ -425,23 +440,35 @@ void process_key_press(char key)
 			joint_position[i] = g_status.joint_position[i];
 		result = iarm_move_position_joint(g_hRobot, joint_position, g_status.gripper_opening, IARM_LIFT_DOWN);
 		break;
+
+		// Print help
 	case '?':
 		print_help();
 		break;
+
+		// Stop any movements by pressing non-command key
 	default:
 		printf(" > Stop\n");
+		// Get the current status
 		result = iarm_move_stop(g_hRobot);
+
+		// Set all velocity 0 
 		for (i = 0; i < IARM_NR_JOINTS; i++)
 			jointVelocity[i] = 0.0f;
 		for (i = 0; i < 6; i++)
 			linearVelocity[i] = 0.0f;
+		// Set gripperVelocity 0
 		gripperVelocity = 0.0f;
 		break;
+
 	}
+
+	// Command is not processed accurately
 	if (result == IARM_FAILED)
 		print_error();
 }
 
+// Function to print all runtime parameters 
 void print_help(void)
 {
 	printf("'?'   Help                 \n");
@@ -469,26 +496,38 @@ void print_help(void)
 	print_separator();
 }
 
+
+// Function to print iarm library information
 void print_application_title(void)
 {
 	int versionMajor, versionMinor, versionBuild;
+	// API function to get library version
 	iarm_get_library_version(&versionMajor, &versionMinor, &versionBuild);
 	printf("i A R M (library version %d.%d.%d)\n\n", versionMajor, versionMinor, versionBuild);
 }
 
+// Function to print separator
 void print_separator(void)
 {
 	printf("------------------------------------------------------------\n");
 }
 
+// Function to print all parameters
 void ShowAllHelp(void)
 {
 	printf("iARM HELP\n");
 	printf(" commandline parameters:\n");
 	print_separator();
+
+	// Parameter to show CAN port used to connect to the iARM
+	// In <port> input a port number that you cheack
 	printf(" -p=<port>    -- CAN port used to connect to the ARM.\n");
+
+	// 
 	printf(" -g_hRobot           -- Show this message.\n");
 	print_separator();
+
+	// Print runtime commands
 	printf(" iARM runtime commands:\n");
 	print_separator();
 	print_help();
@@ -501,24 +540,36 @@ void print_error(void)
 	iarm_disconnect(g_hRobot);
 }
 
+
+// Function to read program arguments
+// Return TURE when read an accurate argument
+// Retrun FALSE when read an inaccurate argument 
 int read_arguments(int argc, char *argv[])
 {
+	// Variable for a loop counter
 	int i;
+	// Variable for an argument(one character)
 	char prm;
+	// Variable for an argument string 
 	char *ptr;
 	BOOL arg;
-
+	// Cheack all arguments
 	for (i = 1; i < argc; i++)
 	{
+		// Get a i-th argument
 		ptr = argv[i];
+		// Skip a argument indicator '-' 
 		while (*ptr == '-')
 			ptr++;
+		// Get one character from an argument
 		prm = *(ptr++);
+		// Make arg True if a character is '='
 		arg = (*ptr == '=');
 		if (arg) ptr++;
-
+		// Parse an argument
 		switch (prm)
 		{
+			// When an argument is 'p'
 		case 'p':
 			if (arg)
 				g_can_port = strtoul(ptr, NULL, 10);
@@ -528,10 +579,13 @@ int read_arguments(int argc, char *argv[])
 				return FALSE;
 			}
 			break;
+			// When an argument is '?' or 'h'
+			// Show help
 		case '?':
 		case 'h':
 			ShowAllHelp();
 			return FALSE;
+			// When an argument is undefined
 		default:
 			printf("\"%s\": unknown commandline argument: %d\n", argv[0], prm);
 			return FALSE;
@@ -540,7 +594,7 @@ int read_arguments(int argc, char *argv[])
 	return TRUE;
 }
 
-/* sleep for the provided amount of milliseconds */
+// Function to sleep for the provided amount of milliseconds
 void mssleep(int ms)
 {
 #ifdef WIN32
@@ -554,8 +608,9 @@ void mssleep(int ms)
 #endif // UNIX
 }
 
-/* returns TRUE if a key has been pressed, FALSE otherwise. If a key has been pressed, the
-* corresponding ASCII code for that key is copied to the provided key address */
+// Function to read keyinput
+// Returns TRUE if a key has been pressed, FALSE otherwise. 
+// If a key has been pressed, the corresponding ASCII code for that key is copied to the provided key address 
 BOOL keyboard_read_key(char *key)
 {
 #ifdef UNIX
@@ -604,4 +659,3 @@ void ttyreset(int signal)
 #endif
 	exit(signal);
 }
-
