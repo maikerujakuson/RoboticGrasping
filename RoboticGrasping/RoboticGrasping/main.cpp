@@ -23,6 +23,41 @@
 //	return 0;
 //}
 
+/*
+* Copyright (c) 2010 by Exact Dynamics B.V.
+*
+* All rights reserved. No part of this software or
+* source code may be used, reproduced, stored in a retrieval system, or
+* transmitted, in any form or by any means, without prior written permission
+* from Exact Dynamics B.V. Except as expressly provided in writing by Exact
+* Dynamics B.V., Exact Dynamics B.V. does not grant any express or implied
+* rights to use (any part of) this software & source code.
+*
+*  Exact Dynamics B.V. This software may only be used in combination
+*  with a valid Transparent Mode Software License from Exact Dynamics B.V.
+*  Exact Dynamics B.V. does not take any responsibility for the consequences
+*  of the usage of this software and the iARM, this includes damage to the iARM
+*  and/or its suroundings (including people).
+*
+*  By using this software, you agree to this agreement. If you do not agree
+*  please contact Exact Dynamics B.V. and do not use this software or the iARM.
+*
+*  This Copyright notice may not be removed or modified without prior
+*  written consent of esd gmbh.
+*
+*  Exact Dynamics B.V., reserves the right to modify this software
+*  without notice.
+*
+*  For support, questions and/or suggestions do not hesitate to contact
+*  use at research@exactdynamics.nl, after reading the manual.
+*
+*  Have fun!
+*
+*  Exact Dynamics B.V.
+*
+*  Chamber of Commerce: Arnhem, the Netherlands, 090705840000.
+*/
+
 #ifdef WIN32
 #include <windows.h>
 #include <conio.h>
@@ -84,10 +119,7 @@ void ttyreset(int);
 /* GLOBALS */
 
 IARM_HANDLE g_hRobot = IARM_INVALID_HANDLE;
-
-// variable for a can port number (default value is 0)
 int			g_can_port = DEFAULT_CAN_PORT;
-
 IARM_STATUS	g_status;
 
 float linearVelocity[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
@@ -98,53 +130,36 @@ float gripper_position = 0.0f;
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 float positionZero[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 
-
-// MAIN FUNCTION
 int main(int argc, char *argv[])
 {
-	// ?
 	int status_counter = 0;
-	// Variable for keyboard input
 	char key;
 
-	//	Print library version 
 	print_application_title();
 
-	// Terminate the program when arguments is inaccurate 
 	if (!read_arguments(argc, argv))
 		return EXIT_ERROR;
 
-	// Print a can port to connect iARM 
 	printf("Waiting for iARM to connect on CAN-bus %d...\n", g_can_port);
 
-	// Make connections between iARM and PC 
 	g_hRobot = iarm_connect(g_can_port);
-	// Terminate the program when connection is failed
 	if (IARM_INVALID_HANDLE == g_hRobot)
 	{
 		printf("Could not open CAN device on CAN-bus %d\n", g_can_port);
 		return EXIT_ERROR;
 	}
-
-	// Configure TTY for keyboard input (only in UNIX)
 	ttyset();
-
-	// Print runtime parameters
 	print_help();
 
-	// Get the current iarm status
 	printf("!Robot connected\n");
 	iarm_get_status(g_hRobot, &g_status);
 
-	// Main loop for example application.
-	// Every <STATUS_CHECK_INTERVAL> cycles the status of the iARM is checked. 
-
-	// Do loops until connection between iARM and PC is OK
+	/* Main loop for example application.
+	* Every <STATUS_CHECK_INTERVAL> cycles the status of the iARM is checked. */
 	while (iarm_is_connected(g_hRobot) == IARM_SUCCESS)
 	{
-		// Read keyboard input 
+		/* read and process keyboard input */
 		if (keyboard_read_key(&key))
-			//
 			process_key_press(key);
 
 		if (status_counter++ == STATUS_CHECK_INTERVAL)
@@ -213,7 +228,6 @@ void update_status()
 	memcpy(&g_status, &current_status, sizeof(IARM_STATUS));
 }
 
-// Function to process keyinput
 void process_key_press(char key)
 {
 	IARM_RESULT result = IARM_SUCCESS;
@@ -428,7 +442,6 @@ void process_key_press(char key)
 		print_error();
 }
 
-// Function to print all runtime parameters 
 void print_help(void)
 {
 	printf("'?'   Help                 \n");
@@ -456,38 +469,26 @@ void print_help(void)
 	print_separator();
 }
 
-
-// Function to print iarm library information
 void print_application_title(void)
 {
 	int versionMajor, versionMinor, versionBuild;
-	// API function to get library version
 	iarm_get_library_version(&versionMajor, &versionMinor, &versionBuild);
 	printf("i A R M (library version %d.%d.%d)\n\n", versionMajor, versionMinor, versionBuild);
 }
 
-// Function to print separator
 void print_separator(void)
 {
 	printf("------------------------------------------------------------\n");
 }
 
-// Function to print all parameters
 void ShowAllHelp(void)
 {
 	printf("iARM HELP\n");
 	printf(" commandline parameters:\n");
 	print_separator();
-
-	// Parameter to show CAN port used to connect to the iARM
-	// In <port> input a port number that you cheack
 	printf(" -p=<port>    -- CAN port used to connect to the ARM.\n");
-
-	// 
 	printf(" -g_hRobot           -- Show this message.\n");
 	print_separator();
-
-	// Print runtime commands
 	printf(" iARM runtime commands:\n");
 	print_separator();
 	print_help();
@@ -500,36 +501,24 @@ void print_error(void)
 	iarm_disconnect(g_hRobot);
 }
 
-
-// Function to read program arguments
-// Return TURE when read an accurate argument
-// Retrun FALSE when read an inaccurate argument 
 int read_arguments(int argc, char *argv[])
 {
-	// Variable for a loop counter
 	int i;
-	// Variable for an argument(one character)
 	char prm;
-	// Variable for an argument string 
 	char *ptr;
 	BOOL arg;
-	// Cheack all arguments
+
 	for (i = 1; i < argc; i++)
 	{
-		// Get a i-th argument
 		ptr = argv[i];
-		// Skip a argument indicator '-' 
 		while (*ptr == '-')
 			ptr++;
-		// Get one character from an argument
 		prm = *(ptr++);
-		// Make arg True if a character is '='
 		arg = (*ptr == '=');
 		if (arg) ptr++;
-		// Parse an argument
+
 		switch (prm)
 		{
-			// When an argument is 'p'
 		case 'p':
 			if (arg)
 				g_can_port = strtoul(ptr, NULL, 10);
@@ -539,13 +528,10 @@ int read_arguments(int argc, char *argv[])
 				return FALSE;
 			}
 			break;
-			// When an argument is '?' or 'h'
-			// Show help
 		case '?':
 		case 'h':
 			ShowAllHelp();
 			return FALSE;
-			// When an argument is undefined
 		default:
 			printf("\"%s\": unknown commandline argument: %d\n", argv[0], prm);
 			return FALSE;
@@ -568,9 +554,8 @@ void mssleep(int ms)
 #endif // UNIX
 }
 
-// Function to read keyinput
-// Returns TRUE if a key has been pressed, FALSE otherwise. 
-// If a key has been pressed, the corresponding ASCII code for that key is copied to the provided key address 
+/* returns TRUE if a key has been pressed, FALSE otherwise. If a key has been pressed, the
+* corresponding ASCII code for that key is copied to the provided key address */
 BOOL keyboard_read_key(char *key)
 {
 #ifdef UNIX
@@ -619,3 +604,4 @@ void ttyreset(int signal)
 #endif
 	exit(signal);
 }
+
