@@ -44,6 +44,9 @@ struct termios ots; /* copy of initial termios of tty */
 
 #include "iarm.h"
 
+#include <Eigen/Dense>
+
+
 					/* CONSTANTS */
 					// Enumeration for catesian dimension system
 typedef enum IARM_CARTESIAN_DIMENSION { X, Y, Z, YAW, PITCH, ROLL } IARM_CARTESIAN_DIMENSION;
@@ -94,11 +97,29 @@ float jointVelocity[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 float gripperVelocity = 0.0f;
 float joint_position[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 float gripper_position = 0.0f;
-
 // Home position
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 // Zero position
 float positionZero[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+
+// Variable for socket communication
+SOCKET sock;
+struct sockaddr_in dest1;
+char buf[1024];
+WSADATA wsaData;
+
+// Cheack if position is valid
+bool isPositionValid(Eigen::Vector4f& position)
+{
+	float limitPosiX = 0.0f;
+	float limitNegaX = 0.0f;
+	float limitPosiY = 0.0f;
+	float limitNegaY = 0.0f;
+	float limitPosiZ = 0.0f;
+	float limitNegaZ = 0.0f;
+
+	return true;
+}
 
 
 // MAIN FUNCTION
@@ -138,6 +159,21 @@ int main(int argc, char *argv[])
 	printf("!Robot connected\n");
 	iarm_get_status(g_hRobot, &g_status);
 
+	// Initialize socket 
+	WSAStartup(MAKEWORD(2, 0), &wsaData);
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+	dest1.sin_family = AF_INET;
+
+	dest1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+
+	dest1.sin_port = htons(11111);
+
+	memset(buf, 0, sizeof(buf));
+	_snprintf(buf, sizeof(buf), "data to port 11111");
+
+
 	// Main loop for example application.
 	// Do loops until connection between iARM and PC is fine 
 	while (iarm_is_connected(g_hRobot) == IARM_SUCCESS)
@@ -160,9 +196,14 @@ int main(int argc, char *argv[])
 		mssleep(10);
 	}
 	
-	// Clean up
+	// Clean up iARM
 	iarm_disconnect(g_hRobot);
 	printf("iARM terminated.\nPress any key to quit...\n");
+
+	// Clean up socket
+	closesocket(sock);
+
+	WSACleanup();
 
 #ifdef WIN32
 	_getch();
@@ -319,11 +360,21 @@ void process_key_press(char key)
 		iarm_disconnect(g_hRobot);
 		break;
 
-		// Move to home position
+		// REQUEST OBJECT RECOGNIZER
+		// GET POSITION AND POSE OF OBJECT TO GRASP
 	case ';':
 	{
 		printf(" > Home   : cart (fold-out)\n");
-		result = iarm_move_position_linear(g_hRobot, positionHome);
+
+		// Request 
+		sendto(sock,
+			buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
+
+		// Variable for the position of the object 
+		Eigen::Vector4f positionOfobject;
+		if (isPositionValid(positionOfobject)) {
+			break;
+		}
 	}
 	break;
 	// Move to zero-position
