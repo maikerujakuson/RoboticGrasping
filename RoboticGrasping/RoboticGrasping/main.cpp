@@ -180,26 +180,6 @@ int main(int argc, char *argv[])
 	printf("!Robot connected\n");
 	iarm_get_status(g_hRobot, &g_status);
 
-	// Initialize socket 
-	// Variable for socket communication
-	SOCKET sock;
-	struct sockaddr_in dest1;
-	char buf[1024];
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 0), &wsaData);
-
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-	dest1.sin_family = AF_INET;
-
-	dest1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-
-	dest1.sin_port = htons(11111);
-
-	memset(buf, 0, sizeof(buf));
-	_snprintf(buf, sizeof(buf), "data to port 11111");
-
-
 	// Main loop for example application.
 	// Do loops until connection between iARM and PC is fine 
 	while (iarm_is_connected(g_hRobot) == IARM_SUCCESS)
@@ -390,14 +370,16 @@ void process_key_press(char key)
 		// GET POSITION AND POSE OF OBJECT TO GRASP
 	case ';':
 	{
-		printf(" > Home   : cart (fold-out)\n");
-
-		//// Request 
-		//sendto(sock,
-		//	buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
-
+		printf(" Requesting object vector to the recognizer...");
 		// Variable for the position of the object 
 		Eigen::Vector4f positionOfobject;
+		// Write text to socket
+		memset(buf, 0, sizeof(buf));
+		_snprintf(buf, sizeof(buf), "Request for object vector");
+		// Send socket
+		sendto(sock,
+			buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
+
 		if (isPositionValid(positionOfobject)) {
 			break;
 		}
