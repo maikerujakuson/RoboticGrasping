@@ -24,8 +24,11 @@
 //}
 
 #ifdef WIN32
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 #include <windows.h>
 #include <conio.h>
+
 #endif
 #ifdef UNIX
 #include <termios.h>
@@ -100,7 +103,7 @@ float gripper_position = 0.0f;
 // Home position
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 // Zero position
-float positionZero[IARM_NR_JOINTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.57f, 0.0f };
 
 // Variable for socket communication
 SOCKET sock;
@@ -142,9 +145,27 @@ int main(int argc, char *argv[])
 
 	// Make connections between iARM and PC 
 	g_hRobot = iarm_connect(g_can_port);
+
+	// Initialize socket 
+	WSAStartup(MAKEWORD(2, 0), &wsaData);
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	dest1.sin_family = AF_INET;
+	dest1.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	dest1.sin_port = htons(11111);
+
 	// Terminate the program when connection is failed
 	if (IARM_INVALID_HANDLE == g_hRobot)
 	{
+		printf("Send\n");
+
+		// Write text to socket
+		memset(buf, 0, sizeof(buf));
+		_snprintf(buf, sizeof(buf), "data to port 11111");
+		// Send socket
+		sendto(sock,
+			buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
+
+		// Print error messeage and terminate program
 		printf("Could not open CAN device on CAN-bus %d\n", g_can_port);
 		return EXIT_ERROR;
 	}
@@ -160,6 +181,11 @@ int main(int argc, char *argv[])
 	iarm_get_status(g_hRobot, &g_status);
 
 	// Initialize socket 
+	// Variable for socket communication
+	SOCKET sock;
+	struct sockaddr_in dest1;
+	char buf[1024];
+	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 0), &wsaData);
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -366,9 +392,9 @@ void process_key_press(char key)
 	{
 		printf(" > Home   : cart (fold-out)\n");
 
-		// Request 
-		sendto(sock,
-			buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
+		//// Request 
+		//sendto(sock,
+		//	buf, strlen(buf), 0, (struct sockaddr *)&dest1, sizeof(dest1));
 
 		// Variable for the position of the object 
 		Eigen::Vector4f positionOfobject;
