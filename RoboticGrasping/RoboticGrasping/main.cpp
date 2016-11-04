@@ -4,6 +4,7 @@
 //
 //
 //int main()
+
 //{
 //	float x, y, z, roll, pitch, yaw;
 //	IARMInterface iarm;
@@ -49,7 +50,7 @@ struct termios ots; /* copy of initial termios of tty */
 
 #include <Eigen/Dense>
 #include <iostream>
-
+#include <math.h>
 
 /* CONSTANTS */
 // Enumeration for catesian dimension system
@@ -104,7 +105,14 @@ float gripper_position = 0.0f;
 // Home position
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 // Zero position
-float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.57f, 0.0f };
+float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.456f, 0.0f };
+float positionObserve[IARM_NR_JOINTS] = { 106.514f, 0.0f, 545.6f, 1.57f, 2.4f, 0.0f };
+// Camera to robot translation vector
+Eigen::Vector3f vec_trans;
+// Vector for object
+Eigen::Vector4f vec;
+Eigen::Vector3f object;
+
 
 // Variable for socket communication
 // Socket for sending
@@ -116,10 +124,14 @@ char buf[2048];
 WSADATA wsaData;
 // Variable to use select()
 fd_set fds, readfds;
+// Structure for timeout
+struct timeval tv_;
 
-// Vec
-Eigen::Vector4f vec;
+// Cheack flag
+bool cheackPacket = false;
 
+// move flag 
+bool moveAbove = false;
 
 
 // Cheack if position is valid
@@ -135,6 +147,73 @@ bool isPositionValid(Eigen::Vector4f& position)
 	return true;
 }
 
+bool listener()
+{
+	// fd_setの初期化します
+	FD_ZERO(&readfds);
+
+	// selectで待つ読み込みソケットとしてsock1を登録します
+	FD_SET(sock_recv, &readfds);
+
+		// Initialize fds
+		memcpy(&fds, &readfds, sizeof(fd_set));
+
+		// fdsに設定されたソケットが読み込み可能になるまで待ちます
+		select(0, &fds, NULL, NULL, &tv_);
+
+		// sock1に読み込み可能データがある場合
+		if (FD_ISSET(sock_recv, &fds)) {
+			// sock1からデータを受信して表示します
+			memset(buf, 0, sizeof(buf));
+			recv(sock_recv, buf, sizeof(buf), 0);
+			std::string s = buf;
+			std::stringstream ss(s);
+			std::string item;
+			int i = 0;
+			while (std::getline(ss, item, ' ') && !item.empty()) {
+				vec(i++) = stof(item);
+			}
+			std::cout << vec.x() << std::endl;
+			std::cout << vec.y() << std::endl;
+			std::cout << vec.z() << std::endl;
+			std::cout << s << std::endl;
+			//printf("%s\n", buf);
+			return true;
+		}
+	return false;
+}
+
+void transformVec()
+{
+	// Get the current pitch angle 
+	if (iarm_get_status(g_hRobot, &g_status) == IARM_FAILED)
+	{
+		print_error();
+	}
+
+	// Pitch angle
+	float pitch = g_status.cartesian_position[PITCH] - 1.456f;
+	std::cout << "Current pitch angle: " << pitch << std::endl;
+
+	// Change vec unit meter to millimeter
+	vec *= 1000;
+	object.x() = vec.z();
+	object.y() = -vec.x();
+	object.z() = -vec.y();
+	// Create rotation matrix
+	Eigen::Matrix3f rotY;
+	rotY << cos(pitch), 0, -sin(pitch),
+		0, 1, 0,
+		sin(pitch), 0, cos(pitch);
+	
+	object = rotY.inverse() * object;
+	object.x() += 55;
+	object.z() += 45;
+
+	std::cout << "Object X : " << object.x() << std::endl;
+	std::cout << "Object Y : " << object.y() << std::endl;
+	std::cout << "Object Z : " << object.z() << std::endl;
+}
 
 // MAIN FUNCTION
 int main(int argc, char *argv[])
@@ -174,55 +253,13 @@ int main(int argc, char *argv[])
 	// Bind receiver socket 
 	bind(sock_recv, (struct sockaddr *)&addr_recv, sizeof(addr_recv));
 
+	// Structure for timeout
+	tv_.tv_sec = 0;
+	tv_.tv_usec = 0;
+
 	// Terminate the program when connection is failed
 	if (IARM_INVALID_HANDLE == g_hRobot)
 	{
-		printf("Send\n");
-
-		memset(buf, 0, sizeof(buf));
-		_snprintf(buf, sizeof(buf), "Give me object information!!!!");
-		sendto(sock_send,
-			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
-
-		closesocket(sock_send);
-
-		// fd_setの初期化します
-		FD_ZERO(&readfds);
-
-		// selectで待つ読み込みソケットとしてsock1を登録します
-		FD_SET(sock_recv, &readfds);
-
-		// Do listen untile recieving data
-		while (1) {
-			// Initialize fds
-			memcpy(&fds, &readfds, sizeof(fd_set));
-
-			// fdsに設定されたソケットが読み込み可能になるまで待ちます
-			select(0, &fds, NULL, NULL, NULL);
-
-			// sock1に読み込み可能データがある場合
-			if (FD_ISSET(sock_recv, &fds)) {
-				// sock1からデータを受信して表示します
-				memset(buf, 0, sizeof(buf));
-				recv(sock_recv, buf, sizeof(buf), 0);
-				std::string s = buf;
-				std::stringstream ss(s);
-				std::string item;
-				int i = 0;
-				while (std::getline(ss, item, ' ') && !item.empty()) {
-					vec(i++) = stof(item);
-				}
-				std::cout << vec.x() << std::endl;
-				std::cout << vec.y() << std::endl;
-				std::cout << vec.z() << std::endl;
-				std::cout << s << std::endl;
-				//printf("%s\n", buf);
-				break;
-			}
-		}
-
-		WSACleanup();
-
 		// Print error messeage and terminate program
 		printf("Could not open CAN device on CAN-bus %d\n", g_can_port);
 		return EXIT_ERROR;
@@ -255,7 +292,16 @@ int main(int argc, char *argv[])
 			// Set counter back to 0
 			status_counter = 0;
 		}
-		
+
+		// Cheack object information has come
+		if (cheackPacket) {
+			if (listener()) {
+				cheackPacket = false;
+				transformVec();
+			}
+		}
+
+		// Cheack if arm starts moving to above the object		
 		// Sleep 10 milliseconds
 		mssleep(10);
 	}
@@ -425,10 +471,20 @@ void process_key_press(char key)
 		// GET POSITION AND POSE OF OBJECT TO GRASP
 	case ';':
 	{
-		printf(" Requesting object vector to the recognizer...");
+		printf(" Move oberving position...");
+		result = iarm_move_position_linear(g_hRobot, positionObserve);
 		// Variable for the position of the object 
 		Eigen::Vector4f positionOfobject;
 
+		// Send request to recognizer
+		std::cout << "Sending request..." << std::endl;
+		memset(buf, 0, sizeof(buf));
+		_snprintf(buf, sizeof(buf), "Give me object information!!!!");
+		sendto(sock_send,
+			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
+		closesocket(sock_send);
+
+		cheackPacket = true;
 		if (isPositionValid(positionOfobject)) {
 			break;
 		}
@@ -438,7 +494,7 @@ void process_key_press(char key)
 	case '0': 
 	{
 		printf(" > Home   : zero position\n");
-		result = iarm_move_position_joint(g_hRobot, positionZero, 0.0f, IARM_LIFT_KEEP_POS);
+		result = iarm_move_position_linear(g_hRobot, positionZero);
 	}
 	break;
 
