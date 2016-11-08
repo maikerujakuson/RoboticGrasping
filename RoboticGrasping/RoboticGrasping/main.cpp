@@ -147,42 +147,39 @@ bool isPositionValid(Eigen::Vector4f& position)
 	return true;
 }
 
+// ???
 bool listener()
 {
-	// fd_setの初期化します
+	// Initialize fd_set
 	FD_ZERO(&readfds);
 
-	// selectで待つ読み込みソケットとしてsock1を登録します
+	// Register sock_recv as waiting socket
 	FD_SET(sock_recv, &readfds);
 
-		// Initialize fds
-		memcpy(&fds, &readfds, sizeof(fd_set));
+	// Initialize fds
+	memcpy(&fds, &readfds, sizeof(fd_set));
 
-		// fdsに設定されたソケットが読み込み可能になるまで待ちます
-		select(0, &fds, NULL, NULL, &tv_);
+	// Wait for timeout interval until sock_recv gets available 
+	select(0, &fds, NULL, NULL, &tv_);
 
-		// sock1に読み込み可能データがある場合
-		if (FD_ISSET(sock_recv, &fds)) {
-			// sock1からデータを受信して表示します
-			memset(buf, 0, sizeof(buf));
-			recv(sock_recv, buf, sizeof(buf), 0);
-			std::string s = buf;
-			std::stringstream ss(s);
-			std::string item;
-			int i = 0;
-			while (std::getline(ss, item, ' ') && !item.empty()) {
-				vec(i++) = stof(item);
-			}
-			std::cout << vec.x() << std::endl;
-			std::cout << vec.y() << std::endl;
-			std::cout << vec.z() << std::endl;
-			std::cout << s << std::endl;
-			//printf("%s\n", buf);
-			return true;
+	// Cheack if data is in sock_recv
+	if (FD_ISSET(sock_recv, &fds)) {
+		// Take data 
+		memset(buf, 0, sizeof(buf));
+		recv(sock_recv, buf, sizeof(buf), 0);
+		std::string s = buf;
+		std::stringstream ss(s);
+		std::string item;
+		int i = 0;
+		while (std::getline(ss, item, ' ') && !item.empty()) {
+			vec(i++) = stof(item);
 		}
+		return true;
+	}
 	return false;
 }
 
+// Transform object vector from camera to robot frame
 void transformVec()
 {
 	// Get the current pitch angle 
@@ -190,23 +187,24 @@ void transformVec()
 	{
 		print_error();
 	}
-
-	// Pitch angle
+	// Pitch angle (1.456f rad is set as 0 rad )
 	float pitch = g_status.cartesian_position[PITCH] - 1.456f;
 	std::cout << "Current pitch angle: " << pitch << std::endl;
 
-	// Change vec unit meter to millimeter
+	// Change vec unit from meter (camera) to millimeter (robot)
 	vec *= 1000;
+	// Change cordinate axis from camera to robot
 	object.x() = vec.z();
 	object.y() = -vec.x();
 	object.z() = -vec.y();
-	// Create rotation matrix
+	// Create rotation matrix (about robot's Y axis)
 	Eigen::Matrix3f rotY;
-	rotY << cos(pitch), 0, -sin(pitch),
+	rotY << (cos(pitch), 0, -sin(pitch),
 		0, 1, 0,
-		sin(pitch), 0, cos(pitch);
-	
+		sin(pitch), 0, cos(pitch));
+	// Apply rotation matrix to object vector	
 	object = rotY.inverse() * object;
+	// Translate the position of camera to the wrist 
 	object.x() += 55;
 	object.z() += 45;
 
@@ -240,19 +238,14 @@ int main(int argc, char *argv[])
 	WSAStartup(MAKEWORD(2, 0), &wsaData);
 	sock_recv = socket(AF_INET, SOCK_DGRAM, 0);
 	sock_send = socket(AF_INET, SOCK_DGRAM, 0);
-
 	addr_send.sin_family = AF_INET;
 	addr_recv.sin_family = AF_INET;
-
 	addr_send.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	addr_recv.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-
 	addr_send.sin_port = htons(11111);
 	addr_recv.sin_port = htons(22222);
-
 	// Bind receiver socket 
 	bind(sock_recv, (struct sockaddr *)&addr_recv, sizeof(addr_recv));
-
 	// Structure for timeout
 	tv_.tv_sec = 0;
 	tv_.tv_usec = 0;
@@ -297,7 +290,6 @@ int main(int argc, char *argv[])
 		if (cheackPacket) {
 			if (listener()) {
 				cheackPacket = false;
-				transformVec();
 			}
 		}
 
@@ -332,7 +324,7 @@ void update_status()
 	// Get the current status
 	iarm_get_status(g_hRobot, &current_status);
 
-	// Cheack whether status is changed or not
+	// Check whether status is changed or not
 	if (current_status.movement_status != g_status.movement_status)
 	{
 		// Print the new state 
@@ -360,22 +352,24 @@ void update_status()
 			printf("!Block on joint %d resolved\n", i + 1);
 	}
 
-	/* Check if we have a gripper block and did not report it already */
+	//  Check if we have a gripper block and did not report it already 
 	if ((current_status.blocked_status[GRIPPER] != g_status.blocked_status[GRIPPER]) &&
 		(current_status.blocked_status[GRIPPER] != IARM_BLOCK_NONE))
 		printf("!Gripper closed\n");
 
-	// Update the current status to global status
+	// Update the current local status to global status
 	memcpy(&g_status, &current_status, sizeof(IARM_STATUS));
 }
 
 // Function to process keyinput
 void process_key_press(char key)
 {
-	// 
+	// Variable to store result 
 	IARM_RESULT result = IARM_SUCCESS;
+	// variable for loop counter
 	int i;
 
+	// Branch process depending on the pressed key
 	switch (key)
 	{
 		/* XYZ */
@@ -418,7 +412,7 @@ void process_key_press(char key)
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 		break;
 
-		// 
+		// Rotate by Yaw, Ptich Roll angles 
 	case 'f':
 		linearVelocity[YAW] += VELOCITY_STEP_ORIENTATION;
 		printf(" > Yaw+   : %f\n", linearVelocity[YAW]);
@@ -467,7 +461,7 @@ void process_key_press(char key)
 		iarm_disconnect(g_hRobot);
 		break;
 
-		// REQUEST OBJECT RECOGNIZER
+		// REQUEST TO OBJECT RECOGNIZER
 		// GET POSITION AND POSE OF OBJECT TO GRASP
 	case ';':
 	{
@@ -498,23 +492,27 @@ void process_key_press(char key)
 	}
 	break;
 
-	// Joint control
+	// 
 	case '1':
-		jointVelocity[J1] += VELOCITY_STEP_JOINT;
-		printf(" > Joint1+: %f\n", jointVelocity[J1]);
-		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
+		// Move to observe position
+		std::cout << " Move to observe position..." << std::endl;;
+		result = iarm_move_position_linear(g_hRobot, positionObserve);
 		break;
 	case '2':
-		jointVelocity[J2] += VELOCITY_STEP_JOINT;
-		printf(" > Joint2+:  %f\n", jointVelocity[J2]);
-		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
+		// Send request to the recognizer
+		std::cout << "Sending request..." << std::endl;
+		memset(buf, 0, sizeof(buf));
+		_snprintf(buf, sizeof(buf), "Give me object information!!!!");
+		// Send messeage
+		sendto(sock_send,
+			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
 		break;
 	case '3':
-		jointVelocity[J3] += VELOCITY_STEP_JOINT;
-		printf(" > Joint3+:  %f\n", jointVelocity[J3]);
-		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
+		// Transform position vector from camera flame to robot flame
+		transformVec();
 		break;
 	case '4':
+		// Move to above the object
 		jointVelocity[J4] += VELOCITY_STEP_JOINT;
 		printf(" > Joint4+:  %f\n", jointVelocity[J4]);
 		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
