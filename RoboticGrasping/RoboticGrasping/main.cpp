@@ -128,7 +128,7 @@ fd_set fds, readfds;
 struct timeval tv_;
 
 // Cheack flag
-bool cheackPacket = false;
+bool checkPacket = false;
 
 // move flag 
 bool moveAbove = false;
@@ -199,9 +199,15 @@ void transformVec()
 	object.z() = -vec.y();
 	// Create rotation matrix (about robot's Y axis)
 	Eigen::Matrix3f rotY;
-	rotY << (cos(pitch), 0, -sin(pitch),
-		0, 1, 0,
-		sin(pitch), 0, cos(pitch));
+	//rotY << (cos(pitch), 0, -sin(pitch),
+	//	0, 1, 0,
+	//	sin(pitch), 0, cos(pitch));
+	rotY.setZero();
+	rotY(0, 0) = std::cos(pitch);
+	rotY(0, 2) = -std::sin(pitch);
+	rotY(1, 1) = 1.0f;
+	rotY(2, 0) = std::sin(pitch);
+	rotY(2, 2) = std::cos(pitch);
 	// Apply rotation matrix to object vector	
 	object = rotY.inverse() * object;
 	// Translate the position of camera to the wrist 
@@ -287,9 +293,9 @@ int main(int argc, char *argv[])
 		}
 
 		// Cheack object information has come
-		if (cheackPacket) {
+		if (checkPacket) {
 			if (listener()) {
-				cheackPacket = false;
+				checkPacket = false;
 			}
 		}
 
@@ -478,7 +484,7 @@ void process_key_press(char key)
 			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
 		closesocket(sock_send);
 
-		cheackPacket = true;
+		checkPacket = true;
 		if (isPositionValid(positionOfobject)) {
 			break;
 		}
@@ -506,6 +512,8 @@ void process_key_press(char key)
 		// Send messeage
 		sendto(sock_send,
 			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
+		// Flag for receiving data
+		checkPacket = true;
 		break;
 	case '3':
 		// Transform position vector from camera flame to robot flame
