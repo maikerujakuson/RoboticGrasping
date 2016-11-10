@@ -196,25 +196,25 @@ void trackObject()
 	moveVector.y() = objectData(5);
 	std::cout << "MoveVector.x: " << moveVector.x() << std::endl;
 	std::cout << "MoveVector.y: " << moveVector.y() << std::endl;
-	//if (moveVector.x() == 0 && moveVector.y() == 0) {
-	//	linearVelocity[X] = 0.0f;
-	//	linearVelocity[Y] = 0.0f;
-	//}
-	//else if (moveVector.x() > 0 && moveVector.y() > 0) {
-	//	linearVelocity[X] = -10.0f;
-	//	linearVelocity[Y] = -10.0f;
-	//}else if(moveVector.x() > 0 && moveVector.y() < 0){
-	//	linearVelocity[X] = 10.0f;
-	//	linearVelocity[Y] = -10.0f;
-	//}
-	//else if (moveVector.x() < 0 && moveVector.y() > 0) {
-	//	linearVelocity[X] = -10.0f;
-	//	linearVelocity[Y] = 10.0f;
-	//}
-	//else {
-	//	linearVelocity[X] = 10.0f;
-	//	linearVelocity[Y] = 10.0f;
-	//}
+	if (moveVector.x() == 0 && moveVector.y() == 0) {
+		linearVelocity[X] = 0.0f;
+		linearVelocity[Y] = 0.0f;
+	}
+	else if (moveVector.x() > 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -10.0f;
+		linearVelocity[Y] = -10.0f;
+	}else if(moveVector.x() > 0 && moveVector.y() < 0){
+		linearVelocity[X] = 10.0f;
+		linearVelocity[Y] = -10.0f;
+	}
+	else if (moveVector.x() < 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -10.0f;
+		linearVelocity[Y] = 10.0f;
+	}
+	else {
+		linearVelocity[X] = 10.0f;
+		linearVelocity[Y] = 10.0f;
+	}
 }
 
 // Transform object vector from camera to robot frame
