@@ -107,11 +107,19 @@ float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57
 // Zero position
 float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.456f, 0.0f };
 float positionObserve[IARM_NR_JOINTS] = { 106.514f, 0.0f, 545.6f, 1.57f, 2.4f, 0.0f };
+
+// Vector tor recive object data
+Eigen::MatrixXf objectData(2, 3);
 // Camera to robot translation vector
 Eigen::Vector3f vec_trans;
 // Vector for object
 Eigen::Vector4f vec;
 Eigen::Vector3f object;
+
+// TRACKING MODE
+// Move vector (Tracking mode)
+Eigen::Vector2f moveVector;
+bool tracking = false;
 
 
 // Variable for socket communication
@@ -147,7 +155,7 @@ bool isPositionValid(Eigen::Vector4f& position)
 	return true;
 }
 
-// ???
+// Listen object data from the recognizer 
 bool listener()
 {
 	// Initialize fd_set
@@ -172,11 +180,40 @@ bool listener()
 		std::string item;
 		int i = 0;
 		while (std::getline(ss, item, ' ') && !item.empty()) {
-			vec(i++) = stof(item);
+			//vec(i++) = stof(item);
+			objectData(i++) = stof(item);
 		}
 		return true;
 	}
 	return false;
+}
+
+// Calculate move vector
+void trackObject()
+{
+	// Take move vector from object data matrix
+	moveVector.x() = objectData(4);
+	moveVector.y() = objectData(5);
+
+	if (moveVector.x() == 0 && moveVector.y() == 0) {
+		linearVelocity[X] = 0.0f;
+		linearVelocity[Y] = 0.0f;
+	}
+	else if (moveVector.x() > 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -10.0f;
+		linearVelocity[Y] = -10.0f;
+	}else if(moveVector.x() > 0 && moveVector.y() < 0){
+		linearVelocity[X] = 10.0f;
+		linearVelocity[Y] = -10.0f;
+	}
+	else if (moveVector.x() < 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -10.0f;
+		linearVelocity[Y] = 10.0f;
+	}
+	else {
+		linearVelocity[X] = 10.0f;
+		linearVelocity[Y] = 10.0f;
+	}
 }
 
 // Transform object vector from camera to robot frame
@@ -297,6 +334,14 @@ int main(int argc, char *argv[])
 			if (listener()) {
 				checkPacket = false;
 			}
+		}
+
+		// Tracking mode
+		if (tracking) {
+			// Listen move vector
+			listener();
+			// Move arm
+			trackObject();
 		}
 
 		// Cheack if arm starts moving to above the object		
@@ -540,6 +585,29 @@ void process_key_press(char key)
 		printf(" > Gripper+:  %f\n", gripperVelocity);
 		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
 		break;
+		
+	case '8':
+		// Switch for tracking mode
+		tracking != tracking;
+		if (tracking) {
+			std::cout << "Tracking mode: ON" << std::endl;
+			memset(buf, 0, sizeof(buf));
+			_snprintf(buf, sizeof(buf), "ON");
+			// Send messeage
+			sendto(sock_send,
+				buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
+		}
+		else {
+			std::cout << "Tracking mode: OFF" << std::endl;
+			memset(buf, 0, sizeof(buf));
+			_snprintf(buf, sizeof(buf), "OFF");
+			// Send messeage
+			sendto(sock_send,
+				buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
+		}
+		break;
+
+
 	case 'q':
 		jointVelocity[J1] -= VELOCITY_STEP_JOINT;
 		printf(" > Joint1-:  %f\n", jointVelocity[J1]);
