@@ -175,26 +175,26 @@ void trackObject()
 	moveVector.y() = objectData(5);
 
 
-	if (moveVector.norm() <= 50) {
+	if (moveVector.norm() <= 5) {
 		linearVelocity[X] = 0.0f;
 		linearVelocity[Y] = 0.0f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if (moveVector.x() > 0 && moveVector.y() > 0) {
-		linearVelocity[X] = -moveVector.x() * 0.1f;
-		linearVelocity[Y] = -moveVector.y() * 0.1f;
+		linearVelocity[X] = -moveVector.y() * 0.1f;
+		linearVelocity[Y] = -moveVector.x() * 0.1f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if(moveVector.x() > 0 && moveVector.y() < 0){
-		linearVelocity[X] = moveVector.x() * 0.1f;
-		linearVelocity[Y] = moveVector.y() * 0.1f;
+		linearVelocity[X] = -moveVector.y() * 0.1f;
+		linearVelocity[Y] = -moveVector.x() * 0.1f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if (moveVector.x() < 0 && moveVector.y() > 0) {
-		linearVelocity[X] = moveVector.x() * 0.1f;
-		linearVelocity[Y] = moveVector.y() * 0.1f;
+		linearVelocity[X] = -moveVector.y() * 0.1f;
+		linearVelocity[Y] = -moveVector.x() * 0.1f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
 	else {
-		linearVelocity[X] = -moveVector.x() * 0.1f;
-		linearVelocity[Y] = -moveVector.y() * 0.1f;
+		linearVelocity[X] = -moveVector.y() * 0.1f;
+		linearVelocity[Y] = -moveVector.x() * 0.1f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
 
