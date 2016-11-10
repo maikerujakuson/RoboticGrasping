@@ -589,7 +589,7 @@ void process_key_press(char key)
 		
 	case '8':
 		// Switch for tracking mode
-		tracking != tracking;
+		tracking = !tracking;
 		if (tracking) {
 			std::cout << "Tracking mode: ON" << std::endl;
 			memset(buf, 0, sizeof(buf));
