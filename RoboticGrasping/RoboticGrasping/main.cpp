@@ -1,29 +1,3 @@
-//#include<iostream>
-//#include"iarmInterface.h"
-//
-//
-//
-//int main()
-
-//{
-//	float x, y, z, roll, pitch, yaw;
-//	IARMInterface iarm;
-//	iarm.init();
-//	iarm.stockUnfold();
-//	iarm.stockLiftDown();
-//	iarm.stockMoveHomePosition();
-//
-//	while (true) {
-//		if (iarm.check() == IARMInterface::CHECK_RESULT_FINISH) {
-//			printf("x y z\n");
-//			scanf("%f %f %f", &x, &y, &z);
-//			if (x == 1000 || y == 1000 || z == 1000) break;
-//			iarm.moveTo(x, y, z);
-//		}
-//	}
-//	return 0;
-//}
-
 #ifdef WIN32
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -74,6 +48,8 @@ typedef enum IARM_JOINT { J1, J2, J3, J4, J5, J6, GRIPPER } IARM_JOINT;
 #define VELOCITY_STEP_ORIENTATION	0.1f
 #define VELOCITY_STEP_JOINT			0.1f
 #define VELOCITY_STEP_GRIPPER		0.01f
+
+#define VELOCITY_TRACKING 30.0f
 
 /* FORWARD DECLARATIONS */
 void update_status(void);
@@ -191,30 +167,40 @@ bool listener()
 // Calculate move vector
 void trackObject()
 {
+	// Variable to store result 
+	IARM_RESULT result = IARM_SUCCESS;
+
 	// Take move vector from object data matrix
 	moveVector.x() = objectData(4);
 	moveVector.y() = objectData(5);
-	std::cout << "MoveVector.x: " << moveVector.x() << std::endl;
-	std::cout << "MoveVector.y: " << moveVector.y() << std::endl;
-	if (moveVector.x() == 0 && moveVector.y() == 0) {
+
+
+	if (moveVector.norm() <= 50) {
 		linearVelocity[X] = 0.0f;
 		linearVelocity[Y] = 0.0f;
-	}
-	else if (moveVector.x() > 0 && moveVector.y() > 0) {
-		linearVelocity[X] = -10.0f;
-		linearVelocity[Y] = -10.0f;
-	}else if(moveVector.x() > 0 && moveVector.y() < 0){
-		linearVelocity[X] = 10.0f;
-		linearVelocity[Y] = -10.0f;
-	}
-	else if (moveVector.x() < 0 && moveVector.y() > 0) {
-		linearVelocity[X] = -10.0f;
-		linearVelocity[Y] = 10.0f;
+		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
+	} else if (moveVector.x() > 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -VELOCITY_TRACKING;
+		linearVelocity[Y] = -VELOCITY_TRACKING;
+		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
+	} else if(moveVector.x() > 0 && moveVector.y() < 0){
+		linearVelocity[X] = VELOCITY_TRACKING;
+		linearVelocity[Y] = -VELOCITY_TRACKING;
+		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
+	} else if (moveVector.x() < 0 && moveVector.y() > 0) {
+		linearVelocity[X] = -VELOCITY_TRACKING;
+		linearVelocity[Y] = VELOCITY_TRACKING;
+		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
 	else {
-		linearVelocity[X] = 10.0f;
-		linearVelocity[Y] = 10.0f;
+		linearVelocity[X] = VELOCITY_TRACKING;
+		linearVelocity[Y] = VELOCITY_TRACKING;
+		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
+
+	// Command is not processed accurately
+	if (result == IARM_FAILED)
+		print_error();
 }
 
 // Transform object vector from camera to robot frame
@@ -353,8 +339,6 @@ int main(int argc, char *argv[])
 	// Clean up iARM
 	iarm_disconnect(g_hRobot);
 	printf("iARM terminated.\nPress any key to quit...\n");
-
-
 
 #ifdef WIN32
 	_getch();
