@@ -243,7 +243,8 @@ void transformVec()
 	object.z() += 45;
 
 	// Offset
-	object.x() += 60;
+	object.x() += 130;
+	object.y() -= 10;
 
 	std::cout << "Object X : " << object.x() << std::endl;
 	std::cout << "Object Y : " << object.y() << std::endl;
@@ -554,17 +555,29 @@ void process_key_press(char key)
 		float above[6];
 		above[0] = positionObserve[0] + object.x();
 		above[1] = positionObserve[1] + object.y();
-		above[2] = positionObserve[2];
+		above[2] = positionObserve[2] - 200.0f;
 		above[3] = positionObserve[3];
-		above[4] = 3.0f;
+		above[4] = 3.14f;
 		above[5] = positionObserve[5];
 		above[6] = positionObserve[6];
 		result = iarm_move_position_linear(g_hRobot, above);
 		break;
 	case '5':
-		jointVelocity[J5] += VELOCITY_STEP_JOINT;
-		printf(" > Joint5+:  %f\n", jointVelocity[J5]);
-		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
+		// Roatate the wrist
+		std::cout << "Rotating wrist..." << std::endl;
+		IARM_RESULT result;
+		IARM_STATUS status;
+
+		if (iarm_get_status(g_hRobot, &status) == IARM_FAILED) {
+			print_error();
+		}
+
+		float jointPosition[6];
+		for (int i = 0; i<6; i++) {
+			jointPosition[i] = status.joint_position[i];
+		}
+		jointPosition[J6] = jointPosition[J6] + (jointPosition[J6] - objectData(3));
+		result = iarm_move_position_joint(g_hRobot, jointPosition, status.gripper_opening, IARM_LIFT_KEEP_POS);
 		break;
 	case '6':
 		jointVelocity[J6] += VELOCITY_STEP_JOINT;
