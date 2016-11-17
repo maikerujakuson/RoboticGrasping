@@ -243,6 +243,9 @@ void transformVec()
 	object.x() += 55;
 	object.z() += 45;
 
+	// Offset
+	object.x() += 50;
+
 	std::cout << "Object X : " << object.x() << std::endl;
 	std::cout << "Object Y : " << object.y() << std::endl;
 	std::cout << "Object Z : " << object.z() << std::endl;
@@ -511,27 +514,9 @@ void process_key_press(char key)
 		iarm_disconnect(g_hRobot);
 		break;
 
-		// REQUEST TO OBJECT RECOGNIZER
-		// GET POSITION AND POSE OF OBJECT TO GRASP
 	case ';':
 	{
-		printf(" Move oberving position...");
-		result = iarm_move_position_linear(g_hRobot, positionObserve);
-		// Variable for the position of the object 
-		Eigen::Vector4f positionOfobject;
-
-		// Send request to recognizer
-		std::cout << "Sending request..." << std::endl;
-		memset(buf, 0, sizeof(buf));
-		_snprintf(buf, sizeof(buf), "Give me object information!!!!");
-		sendto(sock_send,
-			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
-		closesocket(sock_send);
-
-		checkPacket = true;
-		if (isPositionValid(positionOfobject)) {
-			break;
-		}
+		break;
 	}
 	break;
 	// Move to zero-position
@@ -542,7 +527,8 @@ void process_key_press(char key)
 	}
 	break;
 
-	// 
+
+	// Scanning procedure
 	case '1':
 		// Move to observe position
 		std::cout << " Move to observe position..." << std::endl;;
@@ -565,9 +551,16 @@ void process_key_press(char key)
 		break;
 	case '4':
 		// Move to above the object
-		jointVelocity[J4] += VELOCITY_STEP_JOINT;
-		printf(" > Joint4+:  %f\n", jointVelocity[J4]);
-		result = iarm_move_direction_joint(g_hRobot, jointVelocity, gripperVelocity);
+		std::cout << "Moving to above the object..." << std::endl;
+		float above[6];
+		above[0] = positionObserve[0] + object.x();
+		above[1] = positionObserve[1] + object.y();
+		above[2] = positionObserve[2];
+		above[3] = positionObserve[3];
+		above[4] = positionObserve[4];
+		above[5] = positionObserve[5];
+		above[6] = positionObserve[6];
+		result = iarm_move_position_linear(g_hRobot, above);
 		break;
 	case '5':
 		jointVelocity[J5] += VELOCITY_STEP_JOINT;
