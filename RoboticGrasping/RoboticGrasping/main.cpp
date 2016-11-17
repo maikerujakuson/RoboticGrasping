@@ -85,7 +85,7 @@ float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.456f, 0.0f }
 float positionObserve[IARM_NR_JOINTS] = { 106.514f, 0.0f, 545.6f, 1.57f, 2.4f, 0.0f };
 
 // Vector tor recive object data
-Eigen::MatrixXf objectData(2, 3);
+Eigen::MatrixXf objectData(2, 4);
 // Camera to robot translation vector
 Eigen::Vector3f vec_trans;
 // Vector for object
@@ -148,7 +148,10 @@ bool listener()
 
 	// Cheack if data is in sock_recv
 	if (FD_ISSET(sock_recv, &fds)) {
+		std::cout << "Fuck" << std::endl;
 		// Take data 
+		//if (!tracking)
+			std::cout << "Received object data..." << std::endl;
 		memset(buf, 0, sizeof(buf));
 		recv(sock_recv, buf, sizeof(buf), 0);
 		std::string s = buf;
@@ -159,6 +162,8 @@ bool listener()
 			//vec(i++) = stof(item);
 			objectData(i++) = stof(item);
 		}
+		for (int i = 0; i < objectData.size(); i++)
+			std::cout << objectData(i) << std::endl;
 		return true;
 	}
 	return false;
@@ -175,7 +180,7 @@ void trackObject()
 	moveVector.y() = objectData(5);
 
 
-	if (moveVector.norm() <= 5) {
+	if (tracking && moveVector.norm() <= 5) {
 		linearVelocity[X] = 0.0f;
 		linearVelocity[Y] = 0.0f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
@@ -285,6 +290,15 @@ int main(int argc, char *argv[])
 	{
 		// Print error messeage and terminate program
 		printf("Could not open CAN device on CAN-bus %d\n", g_can_port);
+		// Send request to the recognizer
+		std::cout << "Sending request..." << std::endl;
+		memset(buf, 0, sizeof(buf));
+		_snprintf(buf, sizeof(buf), "Scanning");
+		// Send messeage
+		sendto(sock_send,
+			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
+		while(1)
+			listener();
 		return EXIT_ERROR;
 	}
 
@@ -538,7 +552,7 @@ void process_key_press(char key)
 		// Send request to the recognizer
 		std::cout << "Sending request..." << std::endl;
 		memset(buf, 0, sizeof(buf));
-		_snprintf(buf, sizeof(buf), "Give me object information!!!!");
+		_snprintf(buf, sizeof(buf), "Scanning");
 		// Send messeage
 		sendto(sock_send,
 			buf, strlen(buf), 0, (struct sockaddr *)&addr_send, sizeof(addr_send));
