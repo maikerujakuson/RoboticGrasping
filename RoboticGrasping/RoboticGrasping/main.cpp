@@ -180,21 +180,21 @@ void trackObject()
 		linearVelocity[Y] = 0.0f;
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if (moveVector.x() > 0 && moveVector.y() > 0) {
-		linearVelocity[X] = -moveVector.y() * 0.1f;
-		linearVelocity[Y] = -moveVector.x() * 0.1f;
+		linearVelocity[X] = -moveVector.y();
+		linearVelocity[Y] = -moveVector.x();
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if(moveVector.x() > 0 && moveVector.y() < 0){
-		linearVelocity[X] = -moveVector.y() * 0.1f;
-		linearVelocity[Y] = -moveVector.x() * 0.1f;
+		linearVelocity[X] = -moveVector.y();
+		linearVelocity[Y] = -moveVector.x();
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	} else if (moveVector.x() < 0 && moveVector.y() > 0) {
-		linearVelocity[X] = -moveVector.y() * 0.1f;
-		linearVelocity[Y] = -moveVector.x() * 0.1f;
+		linearVelocity[X] = -moveVector.y();
+		linearVelocity[Y] = -moveVector.x();
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
 	else {
-		linearVelocity[X] = -moveVector.y() * 0.1f;
-		linearVelocity[Y] = -moveVector.x() * 0.1f;
+		linearVelocity[X] = -moveVector.y();
+		linearVelocity[Y] = -moveVector.x();
 		result = iarm_move_direction_linear(g_hRobot, linearVelocity);
 	}
 
