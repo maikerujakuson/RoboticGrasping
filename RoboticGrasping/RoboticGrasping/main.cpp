@@ -82,7 +82,7 @@ float gripper_position = 0.0f;
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 // Zero position
 float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.456f, 0.0f };
-float positionObserve[IARM_NR_JOINTS] = { 106.514f, 0.0f, 545.6f, 1.57f, 2.4f, 0.0f };
+float positionObserve[IARM_NR_JOINTS] = { 57.7666f, -96.1773f, 545.5721f, 1.57f, 2.4f, 0.0f };
 
 // Vector tor recive object data
 Eigen::MatrixXf objectData(2, 4);
@@ -148,7 +148,6 @@ bool listener()
 
 	// Cheack if data is in sock_recv
 	if (FD_ISSET(sock_recv, &fds)) {
-		std::cout << "Fuck" << std::endl;
 		// Take data 
 		//if (!tracking)
 			std::cout << "Received object data..." << std::endl;
@@ -220,12 +219,12 @@ void transformVec()
 	float pitch = g_status.cartesian_position[PITCH] - 1.456f;
 	std::cout << "Current pitch angle: " << pitch << std::endl;
 
-	// Change vec unit from meter (camera) to millimeter (robot)
-	vec *= 1000;
 	// Change cordinate axis from camera to robot
-	object.x() = vec.z();
-	object.y() = -vec.x();
-	object.z() = -vec.y();
+	object.x() = objectData(2);
+	object.y() = -objectData(0);
+	object.z() = -objectData(1);
+	// Change vec unit from meter (camera) to millimeter (robot)
+	object *= 1000;
 	// Create rotation matrix (about robot's Y axis)
 	Eigen::Matrix3f rotY;
 	//rotY << (cos(pitch), 0, -sin(pitch),
