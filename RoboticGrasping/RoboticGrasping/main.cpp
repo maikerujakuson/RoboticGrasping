@@ -81,7 +81,7 @@ float gripper_position = 0.0f;
 // Home position
 float positionHome[IARM_NR_JOINTS] = { 129.0f, -420.0f, 7.0f, 1.57f, 0.0f, -1.57f };
 // Zero position
-float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 0.0f, 1.57f, 1.456f, 0.0f };
+float positionZero[IARM_NR_JOINTS] = { 240.0f, 0.0f, 138.29f, 1.57f, 1.456f, 0.0f };
 float positionObserve[IARM_NR_JOINTS] = { 57.7666f, -96.1773f, 545.5721f, 1.57f, 2.4f, 0.0f };
 
 // Vector tor recive object data
@@ -243,7 +243,7 @@ void transformVec()
 	object.z() += 45;
 
 	// Offset
-	object.x() += 50;
+	object.x() += 60;
 
 	std::cout << "Object X : " << object.x() << std::endl;
 	std::cout << "Object Y : " << object.y() << std::endl;
@@ -556,7 +556,7 @@ void process_key_press(char key)
 		above[1] = positionObserve[1] + object.y();
 		above[2] = positionObserve[2];
 		above[3] = positionObserve[3];
-		above[4] = positionObserve[4];
+		above[4] = 3.0f;
 		above[5] = positionObserve[5];
 		above[6] = positionObserve[6];
 		result = iarm_move_position_linear(g_hRobot, above);
